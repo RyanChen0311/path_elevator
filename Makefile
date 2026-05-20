@@ -1,0 +1,53 @@
+# ===========================================================================
+# Elevator-Simulator — Makefile
+# ===========================================================================
+#
+# Targets:
+#   make          Build release binary (./elevator)
+#   make debug    Build with AddressSanitizer + debug symbols
+#   make clean    Remove build artefacts
+#   make run      Build and run interactively
+#
+# ===========================================================================
+
+CXX     = g++
+TARGET  = elevator
+
+SRC_DIR   = src
+INC_DIR   = include
+BUILD_DIR = build
+
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))
+
+CXXFLAGS_COMMON  = -Wall -Wextra -Wpedantic -I$(INC_DIR) -std=c++17
+CXXFLAGS_RELEASE = $(CXXFLAGS_COMMON) -O2
+CXXFLAGS_DEBUG   = $(CXXFLAGS_COMMON) -g3 -O0 -fsanitize=address,undefined
+
+CXXFLAGS ?= $(CXXFLAGS_RELEASE)
+
+.PHONY: all debug clean run
+
+all: $(BUILD_DIR) $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+	@echo ""
+	@echo "  Build complete → ./$(TARGET)"
+	@echo "  Run with: ./$(TARGET)"
+	@echo ""
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+debug: CXXFLAGS = $(CXXFLAGS_DEBUG)
+debug: clean all
+
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET)
+
+run: all
+	./$(TARGET)
