@@ -1,12 +1,11 @@
 # ===========================================================================
-# Elevator-Simulator — Makefile
+# PathElevator (ud) — Makefile
 # ===========================================================================
 #
 # Targets:
-#   make          Build release binary (./elevator)
+#   make          Build release binary (./ud)
 #   make debug    Build with AddressSanitizer + debug symbols
 #   make clean    Remove build artefacts
-#   make run      Build and run interactively
 #
 # ===========================================================================
 
@@ -33,7 +32,7 @@ CXXFLAGS_DEBUG   = $(CXXFLAGS_COMMON) -g3 -O0 -fsanitize=address,undefined
 
 CXXFLAGS ?= $(CXXFLAGS_RELEASE)
 
-.PHONY: all debug clean run
+.PHONY: all debug clean
 
 all: $(BUILD_DIR) $(TARGET)
 
@@ -55,6 +54,3 @@ debug: clean all
 
 clean:
 	rm -rf $(BUILD_DIR) ud ud.exe
-
-run: all
-	./$(TARGET)

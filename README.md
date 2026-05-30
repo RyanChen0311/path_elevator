@@ -1,5 +1,7 @@
 # PathElevator (`ud`)
 
+![CI](https://github.com/RyanChen0311/path_elevator/actions/workflows/ci.yml/badge.svg)
+
 > A filesystem path traversal tool that visualises every directory level between two ancestor paths — like riding an elevator floor by floor, but through your directory tree.
 
 ---

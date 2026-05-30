@@ -11,7 +11,7 @@
  * of `ls` at every stop along the way.
  *
  * @author Ryan Chen
- * @date 2024
+ * @date 2024–2026
  */
 
 #ifndef PATH_ELEVATOR_H
