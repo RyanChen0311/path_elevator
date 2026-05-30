@@ -179,6 +179,10 @@ ud pro<TAB>              # completes to "projects"
 ud projects my<TAB>      # completes to "myapp"
 ```
 
+### Demo
+
+![Demo](assets/ud-demo.gif)
+
 ### Sample output
 
 ```
