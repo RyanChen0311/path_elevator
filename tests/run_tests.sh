@@ -40,13 +40,13 @@ echo ""
 
 # ── Argument errors ────────────────────────────────────────────
 check "no args: exit 1"           1  "Usage"     "$BINARY"
-check "too few args: usage hint"  0  "usage"     "$BINARY" "alpha"
-check "unknown name"              0  "not found" "$BINARY" "nonexistent_xyz_abc" "alpha"
+check "too few args: usage hint"  1  "usage"     "$BINARY" "alpha"
+check "unknown name"              1  "not found" "$BINARY" "nonexistent_xyz_abc" "alpha"
 
 # ── Valid traversals (from controlled temp tree) ───────────────
 pushd "$TMPDIR/alpha/beta/gamma" > /dev/null
 
-check "same start and end"   0  "different"  "$BINARY" alpha alpha
+check "same start and end"   1  "different"  "$BINARY" alpha alpha
 check "DESCEND alpha→gamma"  0  "Floor"      "$BINARY" alpha gamma
 check "ASCEND  gamma→alpha"  0  "Floor"      "$BINARY" gamma alpha
 check "stop at middle floor" 0  "Floor"      "$BINARY" alpha gamma beta

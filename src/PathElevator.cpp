@@ -21,15 +21,15 @@ namespace fs = std::filesystem;
  * ---------------------------------------------------------------------- */
 
 namespace clr {
-    static const char *rst  = "\033[0m";
-    static const char *dim  = "\033[2m";
-    static const char *bcyn = "\033[1;36m";   /* bold cyan    – banners      */
-    static const char *bwht = "\033[1;37m";   /* bold white   – floor label  */
-    static const char *cyn  = "\033[36m";     /* cyan         – path         */
-    static const char *bgrn = "\033[1;32m";   /* bold green   – [FILE] tag   */
-    static const char *yel  = "\033[33m";     /* yellow       – [OTHER] tag  */
-    static const char *byel = "\033[1;33m";   /* bold yellow  – mode keyword */
-    static const char *bmag = "\033[1;35m";   /* bold magenta – arrived      */
+    static constexpr const char *rst  = "\033[0m";
+    static constexpr const char *dim  = "\033[2m";
+    static constexpr const char *bcyn = "\033[1;36m";  /* bold cyan    – banners     */
+    static constexpr const char *bwht = "\033[1;37m";  /* bold white   – floor label */
+    static constexpr const char *cyn  = "\033[36m";    /* cyan         – path        */
+    static constexpr const char *bgrn = "\033[1;32m";  /* bold green   – [FILE] tag  */
+    static constexpr const char *yel  = "\033[33m";    /* yellow       – [OTHER] tag */
+    static constexpr const char *byel = "\033[1;33m";  /* bold yellow  – mode label  */
+    static constexpr const char *bmag = "\033[1;35m";  /* bold magenta – arrived     */
 }
 
 static void enable_ansi()
@@ -59,10 +59,12 @@ PathElevator::PathElevator(const std::string &target_path,
     if (ec)
         throw std::invalid_argument("root path does not exist: " + root_path);
 
-    if (!fs::is_directory(target_))
+    bool target_is_dir = fs::is_directory(target_, ec);
+    if (ec || !target_is_dir)
         throw std::invalid_argument("target path is not a directory: " + target_path);
 
-    if (!fs::is_directory(root_))
+    bool root_is_dir = fs::is_directory(root_, ec);
+    if (ec || !root_is_dir)
         throw std::invalid_argument("root path is not a directory: " + root_path);
 
     fs::path cur = target_;
@@ -101,16 +103,28 @@ void PathElevator::buildCache()
 {
     for (const auto &dir : levels_) {
         std::vector<CachedEntry> entries;
-        std::error_code ec;
+        std::error_code iter_ec;
 
-        for (const auto &e : fs::directory_iterator(dir, ec)) {
+        for (const auto &e : fs::directory_iterator(dir, iter_ec)) {
+            std::error_code entry_ec;
             CachedEntry ce;
+
             ce.name    = e.path().filename().string();
-            ce.is_dir  = e.is_directory();
-            ce.is_file = e.is_regular_file();
-            ce.size    = ce.is_file ? e.file_size(ec) : 0;
+            ce.is_dir  = e.is_directory(entry_ec);
+            if (entry_ec) { ce.is_dir = false; entry_ec.clear(); }
+
+            ce.is_file = e.is_regular_file(entry_ec);
+            if (entry_ec) { ce.is_file = false; entry_ec.clear(); }
+
+            ce.size = ce.is_file ? e.file_size(entry_ec) : 0;
+            if (entry_ec) ce.size = 0;
+
             entries.push_back(std::move(ce));
         }
+
+        if (iter_ec)
+            std::cerr << "ud: warning: could not fully read '"
+                      << dir.string() << "': " << iter_ec.message() << "\n";
 
         std::sort(entries.begin(), entries.end(),
                   [](const CachedEntry &a, const CachedEntry &b) {
@@ -206,14 +220,14 @@ void PathElevator::ride(Mode mode, const fs::path &stop_at) const
  * ud command
  * ---------------------------------------------------------------------- */
 
-void PathElevator::ud(const std::vector<std::string> &args)
+int PathElevator::ud(const std::vector<std::string> &args)
 {
     if (args.size() < 2) {
         std::cerr << "ud: usage: ud <start> <end> [<stop>]\n"
                   << "  start/end  two directory names from the CWD ancestor chain;\n"
                   << "             their relative depths determine direction\n"
                   << "  stop       optional: display halts at this level\n";
-        return;
+        return 1;
     }
 
     const std::string &start_seg = args[0];
@@ -221,10 +235,15 @@ void PathElevator::ud(const std::vector<std::string> &args)
     const std::string *stop_seg  = args.size() >= 3 ? &args[2] : nullptr;
 
     std::error_code ec;
-    fs::path cwd = fs::canonical(fs::current_path(ec), ec);
+    fs::path cwd_raw = fs::current_path(ec);
     if (ec) {
-        std::cerr << "ud: cannot resolve current directory\n";
-        return;
+        std::cerr << "ud: cannot resolve current directory: " << ec.message() << "\n";
+        return 1;
+    }
+    fs::path cwd = fs::canonical(cwd_raw, ec);
+    if (ec) {
+        std::cerr << "ud: cannot canonicalize current directory: " << ec.message() << "\n";
+        return 1;
     }
 
     std::vector<fs::path> all_levels;
@@ -250,16 +269,16 @@ void PathElevator::ud(const std::vector<std::string> &args)
     if (start_idx < 0) {
         std::cerr << "ud: '" << start_seg << "' not found in: "
                   << cwd.string() << "\n";
-        return;
+        return 1;
     }
     if (end_idx < 0) {
         std::cerr << "ud: '" << end_seg << "' not found in: "
                   << cwd.string() << "\n";
-        return;
+        return 1;
     }
     if (start_idx == end_idx) {
         std::cerr << "ud: start and end must be different directories\n";
-        return;
+        return 1;
     }
 
     int stop_idx = -1;
@@ -268,7 +287,7 @@ void PathElevator::ud(const std::vector<std::string> &args)
         if (stop_idx < 0) {
             std::cerr << "ud: '" << *stop_seg << "' not found in: "
                       << cwd.string() << "\n";
-            return;
+            return 1;
         }
         int lo = std::min(start_idx, end_idx);
         int hi = std::max(start_idx, end_idx);
@@ -276,7 +295,7 @@ void PathElevator::ud(const std::vector<std::string> &args)
             std::cerr << "ud: stop '" << *stop_seg
                       << "' is not between '" << start_seg
                       << "' and '" << end_seg << "'\n";
-            return;
+            return 1;
         }
     }
 
@@ -293,5 +312,8 @@ void PathElevator::ud(const std::vector<std::string> &args)
         pe.ride(mode, stop_p);
     } catch (const std::exception &e) {
         std::cerr << "ud: " << e.what() << "\n";
+        return 1;
     }
+
+    return 0;
 }

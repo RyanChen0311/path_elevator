@@ -13,7 +13,7 @@
  *   stop         optional display limit (must lie between start and end)
  *
  * @author Ryan Chen
- * @date 2024
+ * @date 2024–2026
  */
 
 #include "PathElevator.h"
@@ -25,8 +25,7 @@ int main(int argc, char *argv[])
 {
     if (argc >= 2) {
         std::vector<std::string> args(argv + 1, argv + argc);
-        PathElevator::ud(args);
-        return 0;
+        return PathElevator::ud(args);
     }
 
     std::cout << "Usage: ud <start> <end> [<stop>]\n"
