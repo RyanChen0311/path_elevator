@@ -11,7 +11,14 @@
 # ===========================================================================
 
 CXX     = g++
-TARGET  = elevator
+
+# On Windows (MinGW/MSYS2) the linker appends .exe automatically;
+# make clean must remove both to stay tidy.
+ifeq ($(OS),Windows_NT)
+    TARGET := ud.exe
+else
+    TARGET := ud
+endif
 
 SRC_DIR   = src
 INC_DIR   = include
@@ -33,7 +40,7 @@ all: $(BUILD_DIR) $(TARGET)
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	@echo ""
-	@echo "  Build complete → ./$(TARGET)"
+	@echo "  Build complete -> ./$(TARGET)"
 	@echo "  Run with: ./$(TARGET)"
 	@echo ""
 
@@ -47,7 +54,7 @@ debug: CXXFLAGS = $(CXXFLAGS_DEBUG)
 debug: clean all
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) ud ud.exe
 
 run: all
 	./$(TARGET)
